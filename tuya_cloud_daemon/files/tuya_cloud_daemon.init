@@ -1,0 +1,37 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+
+START=99
+STOP=99
+
+start_service() {
+        local enabled
+        local device_id
+        local product_id
+        local device_secret
+
+        config_load 'tuya_cloud_daemon'
+        config_get enabled tuya_cloud_daemon_sct 'enable' '0'
+        config_get product_id tuya_cloud_daemon_sct 'product_id' '-'
+        config_get device_id tuya_cloud_daemon_sct 'device_id' '-'
+        config_get device_secret tuya_cloud_daemon_sct 'device_secret' '-'
+
+	if [ "$enabled" -eq 1 ]; then
+	        procd_open_instance
+                procd_set_param command /usr/bin/tuya_cloud_daemon -d "$device_id" -p "$product_id" -s "$device_secret"
+
+                procd_set_param pidfile /var/run/log_tuya_cloud_daemon.pid
+                procd_set_param file /etc/config/tuya_cloud_daemon
+                procd_close_instance
+        fi
+}
+
+service_triggers() {
+	procd_add_reload_trigger "tuya_cloud_daemon"
+}
+
+reload_service() {
+	stop
+	start
+}
