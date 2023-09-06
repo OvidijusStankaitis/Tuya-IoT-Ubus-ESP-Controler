@@ -5,14 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <libubus.h>
+#include <tuya_error_code.h>
+#include <system_interface.h>
+#include <mqtt_client_interface.h>
+#include <tuyalink_core.h>
+#include <tuya_cacert.h>
+#include <cJSON.h>
 
-#include "tuya_error_code.h"
-#include "system_interface.h"
-#include "mqtt_client_interface.h"
-#include "tuyalink_core.h"
-#include "tuya_cacert.h"
+
 #include "tuyaConnect.h"
-#include "cJSON.h"
 #include "ubusInvoke.h"
 
 struct ubus_context *ctx = NULL;
@@ -21,10 +22,22 @@ uint32_t id;
 static tuya_mqtt_context_t *log_client = NULL;
 static char *deviceId = NULL;
 
-void init_ubus(struct ubus_context *ctxS, uint32_t idS)
+int init_ubus()
 {
-    ctx = ctxS;
-    id = idS;
+    ctx = ubus_connect(NULL);
+	if (!ctx)
+	{
+		syslog(LOG_ERR, "Failed to connect to ubus");
+		return 1;
+	}
+
+	if (ubus_lookup_id(ctx, "esp_device", &id))
+	{
+		syslog(LOG_ERR, "Failed to lookup 'esp_device' on UBUS.");
+		return 1;
+	}
+
+    return 0;
 }
 
 static char *parse_string(const char *json_string)
@@ -150,4 +163,9 @@ void tuya_log(char str[])
     tuyalink_thing_property_report_with_ack(client, deviceId, data);
     syslog(LOG_INFO, "Log sent");
     sleep(1);
+}
+
+void ubus_deinit()
+{
+    ubus_free(ctx);
 }

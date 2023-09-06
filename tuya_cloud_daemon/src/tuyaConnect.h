@@ -16,8 +16,9 @@ struct Device
 
 extern tuya_mqtt_context_t *client;
 
-void init_ubus(struct ubus_context *ctxS, uint32_t idS);
+int init_ubus();
 int tuya_connect(char *dId, char *dSecret);
 void tuya_log(char str[]);
+void ubus_deinit();
 
 #endif

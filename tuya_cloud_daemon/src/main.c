@@ -7,11 +7,11 @@
 #include <stdbool.h>
 #include <libubus.h>
 #include <libubox/blobmsg_json.h>
+#include <tuyalink_core.h>
 
 #include "tuyaConnect.h"
 #include "argParser.h"
 
-#include "tuyalink_core.h"
 
 #define DATA_LEN 30
 
@@ -51,24 +51,12 @@ int main(int argc, char **argv)
 		goto cleanup;
 	}
 
-	struct ubus_context *ctx;
 	uloop_init();
-	uint32_t id;
 
-	ctx = ubus_connect(NULL);
-	if (!ctx)
+	if(init_ubus())
 	{
-		syslog(LOG_ERR, "Failed to connect to ubus");
 		goto cleanup;
 	}
-
-	if (ubus_lookup_id(ctx, "esp_device", &id))
-	{
-		syslog(LOG_ERR, "Failed to lookup 'esp_device' on UBUS.");
-		goto cleanup;
-	}
-
-	init_ubus(ctx, id);
 
 	while (run)
 	{
@@ -79,7 +67,7 @@ int main(int argc, char **argv)
 cleanup:
 	tuya_mqtt_disconnect(client);
 	tuya_mqtt_deinit(client);
-	ubus_free(ctx);
+	ubus_deinit();
 	syslog(LOG_INFO, "Disconnected from Tuya");
 	closelog();
 	return 0;
