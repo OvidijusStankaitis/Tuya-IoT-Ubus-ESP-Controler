@@ -68,7 +68,7 @@ static int parse_devices()
 
 int invoke_devices(struct ubus_context *ctx, uint32_t id)
 {
-    if (ubus_invoke(ctx, id, "devices", NULL, device_callback, NULL, 1000))
+    if (ubus_invoke(ctx, id, "devices", NULL, device_callback, &devices, 1000))
     {
         syslog(LOG_ERR, "Failed to invoke 'devices' on UBUS.");
         tuya_log("Failed to invoke 'devices' on UBUS.");
@@ -97,18 +97,31 @@ int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *por
 
     if (ubus_invoke(ctx, id, method, b.head, NULL, NULL, 3000))
     {
-        syslog(LOG_ERR, "Failed to invoke '%s' on UBUS.", method);
-        int len = snprintf(NULL, 0, "Failed to invoke '%s' on UBUS.", method);
-        char str[len + 1];
-        snprintf(str, len + 1, "Failed to invoke '%s' on UBUS.", method);
-        tuya_log(str);
-        return 1;
+        if(method == "on")
+        {
+            syslog(LOG_ERR, "Failed to invoke 'on' on UBUS.");
+            tuya_log("Failed to invoke 'on' on UBUS.");
+            return 1;
+        }
+        else
+        {
+            syslog(LOG_ERR, "Failed to invoke 'off' on UBUS.");
+            tuya_log("Failed to invoke 'off' on UBUS.");
+            return 1;
+        }
     }
 
-    syslog(LOG_INFO, "Successfully invoked '%s' on UBUS.", method);
-    int len = snprintf(NULL, 0, "Successfully invoked '%s' on UBUS.", method);
-    char str[len + 1];
-    snprintf(str, len + 1, "Successfully invoked '%s' on UBUS.", method);
-    tuya_log(str);
+    if(method == "on")
+    {
+        syslog(LOG_INFO, "Successfully invoked 'on' on UBUS.");
+        tuya_log("Successfully invoked 'on' on UBUS.");
+    }
+    else
+    {
+        syslog(LOG_INFO, "Successfully invoked 'off' on UBUS.");
+        tuya_log("Successfully invoked 'off' on UBUS.");
+    }
+
+    
     return 0;
 }
