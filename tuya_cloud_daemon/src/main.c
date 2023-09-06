@@ -17,6 +17,9 @@
 
 tuya_mqtt_context_t client_instance;
 tuya_mqtt_context_t *client = &client_instance;
+
+extern tuya_mqtt_context_t *client;
+
 static bool run = true;
 
 static void handle_signal(int sig)
@@ -41,7 +44,7 @@ int main(int argc, char **argv)
 
 	syslog(LOG_INFO, "Daemon started");
 
-	int ret = tuya_connect(client, args.deviceId, args.deviceSecret);
+	int ret = tuya_connect(args.deviceId, args.deviceSecret);
 
 	if (ret)
 	{
@@ -70,7 +73,7 @@ int main(int argc, char **argv)
 	while (run)
 	{
 		tuya_mqtt_loop(client);
-		sleep(5);
+		sleep(1);
 	}
 
 cleanup:

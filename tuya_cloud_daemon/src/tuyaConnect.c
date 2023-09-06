@@ -15,8 +15,11 @@
 #include "cJSON.h"
 #include "ubusInvoke.h"
 
-struct ubus_context *ctx;
+struct ubus_context *ctx = NULL;
 uint32_t id;
+
+static tuya_mqtt_context_t *log_client = NULL;
+static char *deviceId = NULL;
 
 void init_ubus(struct ubus_context *ctxS, uint32_t idS)
 {
@@ -61,16 +64,6 @@ static char *parse_string(const char *json_string)
     return result;
 }
 
-static char *create_argument(char *port, char *pin)
-{
-    int len = snprintf(NULL, 0, "'{\"port\":\"/dev/%s\", \"pin\":%s}'", port, pin);
-    char *argument = (char *)malloc(len + 1);
-    if (argument != NULL) {
-        snprintf(argument, len + 1, "'{\"port\":\"/dev/%s\", \"pin\":%s}'", port, pin);
-    }
-    return argument;
-}
-
 static void send_ubus_command(char *str)
 {
     if (!strncmp(str, BASE_METHOD, strlen(BASE_METHOD)))    
@@ -80,9 +73,10 @@ static void send_ubus_command(char *str)
     }
     char *method = strtok(str, DELIMITER);
     char *port = strtok(NULL, DELIMITER);
-    char *pin = strtok(NULL, DELIMITER);
-    char *argument = create_argument(port, pin);
-    invoke_on_off(ctx, id, method, argument);
+    char *pin_string = strtok(NULL, DELIMITER);
+    int pin = atoi(pin_string);
+
+    invoke_on_off(ctx, id, method, port, pin);
 }
 
 static void on_connected(tuya_mqtt_context_t *context, void *user_data)
@@ -115,7 +109,7 @@ static void on_messages(tuya_mqtt_context_t *context, void *user_data, const tuy
     }
 }
 
-int tuya_connect(tuya_mqtt_context_t *client, char *dId, char *dSecret)
+int tuya_connect(char *dId, char *dSecret)
 {
     int ret = OPRT_OK;
     ret = tuya_mqtt_init(client, &(const tuya_mqtt_config_t){
@@ -143,5 +137,17 @@ int tuya_connect(tuya_mqtt_context_t *client, char *dId, char *dSecret)
         return 1;
     }
 
+    deviceId = dId;
+
     return ret;
+}
+
+void tuya_log(char str[])
+{
+    syslog(LOG_INFO, "Sending log");
+    char data[256];
+    snprintf(data, sizeof(data), "{\"log\":\"%s\"}", str);
+    tuyalink_thing_property_report_with_ack(client, deviceId, data);
+    syslog(LOG_INFO, "Log sent");
+    sleep(1);
 }

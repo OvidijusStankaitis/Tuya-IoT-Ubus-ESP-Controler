@@ -4,6 +4,7 @@
 #include <syslog.h>
 
 #include "ubusInvoke.h"
+#include "tuyaConnect.h"
 
 static char devices[BUFFER_SIZE];
 
@@ -24,33 +25,90 @@ static void device_callback(struct ubus_request *req, int type, struct blob_attr
     free(json_str);
 }
 
+static int parse_devices()
+{
+    cJSON *root = cJSON_Parse(devices);
+    if (!root)
+    {
+        syslog(LOG_ERR, "Failed to parse JSON");
+        return 1;
+    }
+
+    if (!cJSON_IsArray(root))
+    {
+        cJSON_Delete(root);
+        syslog(LOG_ERR, "JSON is not an array");
+        return 1;
+    }
+
+    int deviceCount = cJSON_GetArraySize(root);
+    for (int i = 0; i < deviceCount; i++)
+    {
+        cJSON *device = cJSON_GetArrayItem(root, i);
+        cJSON *port = cJSON_GetObjectItemCaseSensitive(device, "port");
+        cJSON *productId = cJSON_GetObjectItemCaseSensitive(device, "product id");
+        cJSON *vendorId = cJSON_GetObjectItemCaseSensitive(device, "vendor id");
+
+        if (cJSON_IsString(port) && cJSON_IsString(productId) && cJSON_IsString(vendorId))
+        {
+            char csv[BUFFER_SIZE];
+            int csvIndex = snprintf(csv, BUFFER_SIZE, "Device: %d, port: %s, product id: %s, vendor id: %s",
+                                     i + 1, port->valuestring, productId->valuestring, vendorId->valuestring);
+
+            syslog(LOG_INFO, "%s", csv);
+            tuya_log(csv);
+            memset(csv, 0, BUFFER_SIZE);
+        }
+    }
+
+    memset(devices, 0, BUFFER_SIZE);
+    cJSON_Delete(root);
+    return 0;
+}
+
 int invoke_devices(struct ubus_context *ctx, uint32_t id)
 {
     if (ubus_invoke(ctx, id, "devices", NULL, device_callback, NULL, 1000))
     {
         syslog(LOG_ERR, "Failed to invoke 'devices' on UBUS.");
+        tuya_log("Failed to invoke 'devices' on UBUS.");
         return 1;
     }
 
-    syslog(LOG_INFO, "Devices: %s", devices);
+    if(parse_devices())
+    {
+        syslog(LOG_ERR, "Failed to parse devices");
+        tuya_log("Failed to parse devices");
+        return 1;
+    }
+    
+
+    syslog(LOG_INFO, "Successfully invoked 'devices' on UBUS.");
+    tuya_log("Successfully invoked 'devices' on UBUS.");
     return 0;
 }
 
-int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *argument)
+int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *port, int *pin)
 {
-    struct blob_buf b;
+    struct blob_buf b = {};
     blob_buf_init(&b, 0);
-    blobmsg_add_string(&b, "argument", argument);
+    blobmsg_add_string(&b, "port", port);
+    blobmsg_add_u32(&b, "pin", pin);
 
-    char *result = NULL;
-    if (ubus_invoke(ctx, id, method, b.head, NULL, &result, 1000))
+    if (ubus_invoke(ctx, id, method, b.head, NULL, NULL, 3000))
     {
         syslog(LOG_ERR, "Failed to invoke '%s' on UBUS.", method);
+        int len = snprintf(NULL, 0, "Failed to invoke '%s' on UBUS.", method);
+        char str[len + 1];
+        snprintf(str, len + 1, "Failed to invoke '%s' on UBUS.", method);
+        tuya_log(str);
         return 1;
     }
 
-    syslog(LOG_INFO, "Result: %s", result);
-
-    free(result);
+    syslog(LOG_INFO, "Successfully invoked '%s' on UBUS.", method);
+    int len = snprintf(NULL, 0, "Successfully invoked '%s' on UBUS.", method);
+    char str[len + 1];
+    snprintf(str, len + 1, "Successfully invoked '%s' on UBUS.", method);
+    tuya_log(str);
     return 0;
 }

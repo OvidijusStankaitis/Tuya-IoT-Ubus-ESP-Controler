@@ -14,7 +14,10 @@ struct Device
   char deviceSecret[DATA_LEN];
 };
 
+extern tuya_mqtt_context_t *client;
+
 void init_ubus(struct ubus_context *ctxS, uint32_t idS);
-int tuya_connect(tuya_mqtt_context_t *client, char *dId, char *dSecret);
+int tuya_connect(char *dId, char *dSecret);
+void tuya_log(char str[]);
 
 #endif
