@@ -52,7 +52,7 @@ static int parse_devices()
         if (cJSON_IsString(port) && cJSON_IsString(productId) && cJSON_IsString(vendorId))
         {
             char csv[BUFFER_SIZE];
-            int csvIndex = snprintf(csv, BUFFER_SIZE, "Device: %d, port: %s, product id: %s, vendor id: %s",
+            snprintf(csv, BUFFER_SIZE, "Device: %d, port: %s, product id: %s, vendor id: %s",
                                      i + 1, port->valuestring, productId->valuestring, vendorId->valuestring);
 
             syslog(LOG_INFO, "%s", csv);
@@ -88,7 +88,7 @@ int invoke_devices(struct ubus_context *ctx, uint32_t id)
     return 0;
 }
 
-int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *port, int *pin)
+int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *port, int pin)
 {
     struct blob_buf b = {};
     blob_buf_init(&b, 0);
@@ -97,7 +97,7 @@ int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *por
 
     if (ubus_invoke(ctx, id, method, b.head, NULL, NULL, 3000))
     {
-        if(method == "on")
+        if(!strcmp(method, "on"))
         {
             syslog(LOG_ERR, "Failed to invoke 'on' on UBUS.");
             tuya_log("Failed to invoke 'on' on UBUS.");
@@ -111,7 +111,7 @@ int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *por
         }
     }
 
-    if(method == "on")
+    if(!strcmp(method, "on"))
     {
         syslog(LOG_INFO, "Successfully invoked 'on' on UBUS.");
         tuya_log("Successfully invoked 'on' on UBUS.");
@@ -122,6 +122,7 @@ int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *por
         tuya_log("Successfully invoked 'off' on UBUS.");
     }
 
-    
+    blob_buf_free(&b);
+
     return 0;
 }

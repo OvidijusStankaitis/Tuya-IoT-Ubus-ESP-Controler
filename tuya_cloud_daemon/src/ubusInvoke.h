@@ -16,6 +16,6 @@ static const struct blobmsg_policy devices_policy[MAX_ESP_DEVICES_ATTR] = {
 };
 
 int invoke_devices(struct ubus_context *ctx, uint32_t id);
-int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *port, int *pin);
+int invoke_on_off(struct ubus_context *ctx, uint32_t id, char *method, char *port, int pin);
 
 #endif

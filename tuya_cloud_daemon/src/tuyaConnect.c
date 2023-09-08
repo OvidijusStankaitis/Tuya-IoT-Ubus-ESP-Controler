@@ -19,7 +19,6 @@
 struct ubus_context *ctx = NULL;
 uint32_t id;
 
-static tuya_mqtt_context_t *log_client = NULL;
 static char *deviceId = NULL;
 
 int init_ubus()
